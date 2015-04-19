@@ -1,0 +1,153 @@
+---
+title: "PEB advanced R workshop"
+author: "GIovanni M DallOlio"
+date: "19/04/2015"
+output: html_document
+---
+
+Welcome to the PEB advanced R workshop! 
+
+
+
+Requirements
+-------------
+
+
+Let's install all the required packages:
+
+```{r}
+pkgs = c("tidyr", "dplyr", "ggplot2", "reshape2")
+#for (pkg in pkgs) install.packages(pkg)
+for (pkg in pkgs) library(pkg, character.only=T)
+```
+
+The tidyr package requires at least R 3.1.2. If you can't install it you can use reshape2 instead, but you won't be able to follow some of the exercises.
+
+We also need to download the **data file**:
+
+```{r}
+#download.file('', dest='peb_expression.csv')
+```
+
+
+the peb_expression.csv file
+-----------------------------
+
+Let's read the exercise file, and have a look at its contents.
+
+```{r}
+peb = read.table("peb_expression.csv", header=T, sep='\t')
+head(peb)
+summary(peb)
+
+```
+
+The first two columns contain the probe ID and the name of the gene. The other columns contain the expression levels of each gene in an individual. Notice how the name of the columns also encode the population of each individual, e.g. YRI, EUR, or EAS.
+
+
+A piping system for R
+----------------------
+
+The dplyr package introduced a piping system for R, using the %>% symbol.
+
+This works similarly to the | in bash. For example, the following is equivalent to head()
+
+```{r}
+peb %>% head
+```
+
+
+
+Converting to a long format
+------------------------------
+
+All the functions used in the rest of the workshop require the dataset to be in a long format. Let's convert it using the gather() function from tidyr:
+
+
+```{r}
+peb.long = gather(peb, sample, expression, -ID_REF, -IDENTIFIER)
+head(peb.long)
+```
+
+Explanation:
+
+- sample is the name of the new column containing the key variables
+- expression is the new column containing the values variable
+- we use the - operator to define which columns must not be converted to the long format
+
+Note how the new format has only four columns.
+
+If you couldn't install the tidyr package, you can achieve the same using the *melt* function from reshape2
+
+```{r}
+peb.long = melt(peb, id.vars=c("ID_REF", "IDENTIFIER"), variable.name="sample")
+names(peb.long)[4] = "expression"
+head(peb.long, 3)
+```
+
+
+
+Tidying-up the peb.long dataframe
+---------------------------------------------
+
+A best practice rule is that each variable must contain only one type of information. However, if we look at our peb.long dataframe, the sample column contains both the individual ID and its population. Let's split this column into two using *separate* from tidyr
+
+
+```{r}
+peb.long = gather(peb, sample, expression, -ID_REF, -IDENTIFIER)
+peb.long = separate(peb.long, sample, into=c("individual", "population"), sep='\\.')
+```
+
+The above code can be simplified using the %>% operator:
+```{r}
+peb.long = peb %>% 
+  gather(sample, expression, -ID_REF, -IDENTIFIER) %>%
+  separate(sample, into=c("individual", "population"), sep='\\.')
+```
+
+
+
+Group operations
+----------------------
+
+We can use *group_by* and *summarise* from dplyr to calculate the mean expression level by population.
+
+```{r}
+peb.means = peb.long %>% 
+  group_by(population) %>%
+  summarise(
+    mean=mean(expression),
+    sd=sd(expression))
+
+peb.means %>% print
+
+```
+
+
+Plotting the dataset
+------------------------
+
+We will use the ggplot2 package to plot our peb.long dataframe.
+
+
+```{r}
+
+ggplot(peb.long, aes(x=population, y=expression)) +
+  geom_point()
+
+```
+
+Explanation:
+
+- *ggplot(peb.long, aes(x=population, y=expression))* initialize the base ggplot2 object. We use the aes (for aesthetic) function to define the default x and y variables
+
+- *geom_point* adds a scatterplot representation of the base plot
+
+
+```{r}
+```
+
+```{r}
+```
+
+
