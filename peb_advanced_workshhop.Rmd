@@ -26,7 +26,7 @@ The tidyr package requires at least R 3.1.2. If you can't install it you can use
 We also need to download the **data file**:
 
 ```{r}
-#download.file('', dest='peb_expression.csv')
+#download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/peb_expression.csv', dest='peb_expression.csv')
 ```
 
 
@@ -90,7 +90,7 @@ head(peb.long, 3)
 Tidying-up the peb.long dataframe
 ---------------------------------------------
 
-A best practice rule is that each variable must contain only one type of information. However, if we look at our peb.long dataframe, the sample column contains both the individual ID and its population. Let's split this column into two using *separate* from tidyr
+In a properly structured table each variable must contain only one type of information. If we look at our peb.long dataframe, the sample column contains both the individual ID and its population. Let's split this column into two using *separate* from tidyr:
 
 
 ```{r}
@@ -106,11 +106,32 @@ peb.long = peb %>%
 ```
 
 
+To prepare the dataset for our workshop, we need to apply a few more data filtering steps. 
+
+
+```{r}
+peb.long %>% nrow
+
+peb.long = peb %>% 
+  gather(sample, expression, -ID_REF, -IDENTIFIER) %>%
+  separate(sample, into=c("individual", "population"), sep='\\.') %>%
+  subset(!grepl("Control", IDENTIFIER)) %>%
+  subset(!duplicated(IDENTIFIER)) %>%
+  select(-ID_REF)
+
+peb.long %>% nrow
+```
+
+
 
 Group operations
 ----------------------
 
-We can use *group_by* and *summarise* from dplyr to calculate the mean expression level by population.
+Apart from the %>% operator, the dplyr library introduces three useful functions: group_by, summarise and mutate.
+
+- *group_by* is used to define how the rows of a dataset must be grouped. For example, we can group the rows of peb.long by population.
+
+- *summarise* is used to calculate summaries of a grouped dataset - for example we can use it to calculate the mean and standard deviation of the expression for every population:
 
 ```{r}
 peb.means = peb.long %>% 
@@ -120,6 +141,23 @@ peb.means = peb.long %>%
     sd=sd(expression))
 
 peb.means %>% print
+
+```
+
+- *mutate* is used to add columns to a data frame. For example we can use it to check if a given gene is expressed more or less than the mean in a given individual:
+
+
+```{r}
+peb.overexpressed = peb.long %>% 
+  group_by(population) %>%
+  mutate(
+    mean.expression=mean(expression)
+    ) %>%
+  mutate(
+    overexpressed = ifelse(expression > mean.expression, "overexpressed", "underexpressed")
+  )
+
+peb.overexpressed %>% print
 
 ```
 
@@ -142,6 +180,21 @@ Explanation:
 - *ggplot(peb.long, aes(x=population, y=expression))* initialize the base ggplot2 object. We use the aes (for aesthetic) function to define the default x and y variables
 
 - *geom_point* adds a scatterplot representation of the base plot
+
+
+Let' try a boxplot representation:
+
+```{r}
+
+ggplot(peb.long, aes(x=population, y=expression)) +
+  geom_boxplot()
+
+```
+
+
+
+
+
 
 
 ```{r}
