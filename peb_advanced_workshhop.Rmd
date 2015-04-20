@@ -167,6 +167,8 @@ Plotting the dataset
 
 We will use the ggplot2 package to plot our peb.long dataframe.
 
+A ggplot2 plot is composed by a base ggplot() object, defining the dataset and the basic variables used, and by additional elements defining how to represent them. Let's see an example:
+
 
 ```{r}
 
@@ -193,14 +195,67 @@ ggplot(peb.long, aes(x=population, y=expression)) +
 
 
 
+Classifying cancer genes
+------------------------
 
 
-
+Let's download a file containing the classification of genes into oncogenes and tumor suppressors:
 
 ```{r}
+#download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/cancer_genes.csv', dest='cancer_genes.csv')
+cancer = read.table("cancer_genes.csv", header=T)
+cancer %>% head
+
 ```
 
+This file doesn't follow the principles of "tidy" data, according to which each row should represent only one single observation.
+
+In this case we can use the unnest function from tidyr to convert it to a "long" format:
+
+
 ```{r}
+cancer.long = cancer %>%
+    mutate(genes=strsplit(genes, ",") ) %>%
+    unnest(genes) %>%
+    rename(IDENTIFIER=genes)
+
+
+cancer.long %>% head
+```
+
+Now we can use left_join from dplyr to add a column to our peb expression data frame:
+
+
+```{r}
+peb.long %>% peb.long %>%
+    left_join(cancer.long, by='IDENTIFIER') %>%
+    mutate(IDENTIFIER = ifelse(is.na(IDENTIFIER), "no-cancer", IDENTIFIER))
+
+```
+
+
+advanced ggplot2
+---------------------
+
+
+Now that we have two qualitative variables in peb.long, we can create more sophisticated plots.
+
+```{r}
+
+ggplot(peb.long, aes(x=population, y=expression, color=dataset)) +
+    geom_boxplot()
+
+```
+
+
+An useful way to represent multi-dimensional data is facetting:
+
+```{r}
+
+ggplot(peb.long, aes(x=population, y=expression, color=dataset)) +
+    facet_wrap(~dataset) +
+    geom_boxplot()
+
 ```
 
 
