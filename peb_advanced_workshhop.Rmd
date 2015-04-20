@@ -12,7 +12,6 @@ Welcome to the PEB advanced R workshop!
 Requirements
 -------------
 
-
 Let's install all the required packages:
 
 ```{r}
@@ -115,10 +114,10 @@ To prepare the dataset for our workshop, we need to apply a few more data filter
 peb.long %>% nrow
 
 peb.long = peb %>% 
+  subset(!duplicated(IDENTIFIER)) %>%
   gather(sample, expression, -ID_REF, -IDENTIFIER) %>%
   separate(sample, into=c("individual", "population"), sep='\\.') %>%
   subset(!grepl("Control", IDENTIFIER)) %>%
-  subset(!duplicated(IDENTIFIER)) %>%
   select(-ID_REF)
 
 peb.long %>% nrow
@@ -146,12 +145,12 @@ peb.means %>% print
 
 ```
 
-- *mutate* is used to add columns to a data frame. For example we can use it to check if a given gene is expressed more or less than the mean in a given individual:
+- *mutate* is used to add columns to a data frame. For example we can use it to check if a given gene is over or under expressed in an individual, compared to the other genes:
 
 
 ```{r}
-peb.overexpressed = peb.long %>% 
-  group_by(population) %>%
+peb.long = peb.long %>% 
+  group_by(individual) %>%
   mutate(
     mean.expression=mean(expression)
     ) %>%
@@ -159,7 +158,7 @@ peb.overexpressed = peb.long %>%
     overexpressed = ifelse(expression > mean.expression, "overexpressed", "underexpressed")
   )
 
-peb.overexpressed %>% print
+peb.long %>% head %>% print.data.frame(row.names=F)
 
 ```
 
@@ -174,7 +173,7 @@ A ggplot2 plot is composed by a base ggplot() object, defining the dataset and t
 
 ```{r}
 
-ggplot(peb.long, aes(x=population, y=expression)) +
+ggplot(peb.long, aes(x=overexpressed, y=expression)) +
   geom_point() + 
   ggtitle("My first ggplot")
 
@@ -182,7 +181,7 @@ ggplot(peb.long, aes(x=population, y=expression)) +
 
 Explanation:
 
-- *ggplot(peb.long, aes(x=population, y=expression))* initialize the base ggplot2 object. We use the aes (for aesthetic) function to define the default x and y variables
+- *ggplot(peb.long, aes(x=overexpressed, y=expression))* initialize the base ggplot2 object. We use the aes (for aesthetic) function to define the default x and y variables
 
 - *geom_point* adds a scatterplot representation of the base plot
 
@@ -192,8 +191,19 @@ Let' try a boxplot representation:
 
 ```{r}
 
-ggplot(peb.long, aes(x=population, y=expression)) +
+ggplot(peb.long, aes(x=overexpressed, y=expression)) +
   geom_boxplot()
+
+```
+
+Let's create a nicer plot, in which we color by the population variable, also set limits for the Y axes, and use a whiter plot theme.
+
+```{r}
+
+ggplot(peb.long, aes(x=overexpressed, y=expression, color=population)) +
+  geom_boxplot() + 
+  scale_y_continuous("Expression", limits=c(0, 1000)) + 
+  theme_bw()
 
 ```
 
@@ -223,7 +233,6 @@ cancer.long = cancer %>%
     unnest(genes) %>%
     rename(IDENTIFIER=genes)
 
-
 cancer.long %>% head
 ```
 
@@ -233,7 +242,7 @@ Now we can use left_join from dplyr to add a column to our peb expression data f
 ```{r}
 peb.long = peb.long %>%
     left_join(cancer.long, by='IDENTIFIER') %>%
-    mutate(IDENTIFIER = ifelse(is.na(IDENTIFIER), "no-cancer", IDENTIFIER))
+    mutate(dataset = ifelse(is.na(dataset), "no-cancer", as.character(dataset)))
 
 ```
 
@@ -242,24 +251,14 @@ advanced ggplot2
 ---------------------
 
 
-Now that we have two qualitative variables in peb.long, we can create more sophisticated plots.
+Now that we have more qualitative variables in peb.long, we can create more sophisticated plots. For example, an useful way to represent multi-dimensional data is facetting:
 
 ```{r}
 
-ggplot(peb.long, aes(x=population, y=expression, color=dataset)) +
-    geom_boxplot()
-
+ggplot(peb.long, aes(x=overexpressed, y=expression, color=population)) +
+  facet_wrap(~dataset) +
+  geom_boxplot() +
+  scale_y_continuous("Expression", limits=c(0, 1000)) + 
+  theme_bw()
 ```
-
-
-An useful way to represent multi-dimensional data is facetting:
-
-```{r}
-
-ggplot(peb.long, aes(x=population, y=expression, color=dataset)) +
-    facet_wrap(~dataset) +
-    geom_boxplot()
-
-```
-
 
