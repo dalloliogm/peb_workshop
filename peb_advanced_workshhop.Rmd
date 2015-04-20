@@ -21,7 +21,7 @@ pkgs = c("tidyr", "dplyr", "ggplot2", "reshape2")
 for (pkg in pkgs) library(pkg, character.only=T)
 ```
 
-The tidyr package requires at least R 3.1.2. If you can't install it you can use reshape2 instead, but you won't be able to follow some of the exercises.
+The tidyr package requires at least R 3.1.2. If you can't install it, you can use reshape2 instead, but you won't be able to follow some of the exercises.
 
 We also need to download the **data file**:
 
@@ -50,7 +50,9 @@ A piping system for R
 
 The dplyr package introduced a piping system for R, using the %>% symbol.
 
-This works similarly to the | in bash. For example, the following is equivalent to head()
+This works similarly to the | in bash. We first write the name of the dataframe to use, then all the operation that must be executed on it.
+
+For example, the following is equivalent to head(peb)
 
 ```{r}
 peb %>% head
@@ -77,7 +79,7 @@ Explanation:
 
 Note how the new format has only four columns.
 
-If you couldn't install the tidyr package, you can achieve the same using the *melt* function from reshape2
+If you couldn't install the tidyr package, you can achieve the same format using the *melt* function from reshape2
 
 ```{r}
 peb.long = melt(peb, id.vars=c("ID_REF", "IDENTIFIER"), variable.name="sample")
@@ -94,8 +96,8 @@ In a properly structured table each variable must contain only one type of infor
 
 
 ```{r}
-peb.long = gather(peb, sample, expression, -ID_REF, -IDENTIFIER)
-peb.long = separate(peb.long, sample, into=c("individual", "population"), sep='\\.')
+peb.long.tmp = gather(peb, sample, expression, -ID_REF, -IDENTIFIER)
+peb.long     = separate(peb.long.tmp, sample, into=c("individual", "population"), sep='\\.')
 ```
 
 The above code can be simplified using the %>% operator:
@@ -106,7 +108,7 @@ peb.long = peb %>%
 ```
 
 
-To prepare the dataset for our workshop, we need to apply a few more data filtering steps. 
+To prepare the dataset for our workshop, we need to apply a few more data filtering steps, like removing all the "Control" rows, eliminating all the duplicated genes (keeping only one probe per gene), and dropping the ID_REF column. 
 
 
 ```{r}
@@ -173,7 +175,8 @@ A ggplot2 plot is composed by a base ggplot() object, defining the dataset and t
 ```{r}
 
 ggplot(peb.long, aes(x=population, y=expression)) +
-  geom_point()
+  geom_point() + 
+  ggtitle("My first ggplot")
 
 ```
 
@@ -183,6 +186,7 @@ Explanation:
 
 - *geom_point* adds a scatterplot representation of the base plot
 
+- *ggtitle* is another element of the plot, in this case the title.
 
 Let' try a boxplot representation:
 
@@ -215,7 +219,7 @@ In this case we can use the unnest function from tidyr to convert it to a "long"
 
 ```{r}
 cancer.long = cancer %>%
-    mutate(genes=strsplit(genes, ",") ) %>%
+    mutate(genes=strsplit(as.character(genes), ",") ) %>%
     unnest(genes) %>%
     rename(IDENTIFIER=genes)
 
@@ -227,7 +231,7 @@ Now we can use left_join from dplyr to add a column to our peb expression data f
 
 
 ```{r}
-peb.long %>% peb.long %>%
+peb.long = peb.long %>%
     left_join(cancer.long, by='IDENTIFIER') %>%
     mutate(IDENTIFIER = ifelse(is.na(IDENTIFIER), "no-cancer", IDENTIFIER))
 
