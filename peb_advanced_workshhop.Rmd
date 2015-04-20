@@ -22,17 +22,19 @@ for (pkg in pkgs) library(pkg, character.only=T)
 
 The tidyr package requires at least R 3.1.2. If you can't install it, you can use reshape2 instead, but you won't be able to follow some of the exercises.
 
-We also need to download the **data file**:
+We also need to download the following **data files**:
 
 ```{r}
 #download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/peb_expression.csv', dest='peb_expression.csv')
+#download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/cancer_genes.csv', dest='cancer_genes.csv')
+
 ```
 
 
 the peb_expression.csv file
 -----------------------------
 
-Let's read the exercise file, and have a look at its contents.
+Let's read the peb_expression.csv file that we just downloaded, and have a look at its contents.
 
 ```{r}
 peb = read.table("peb_expression.csv", header=T, sep='\t')
@@ -114,10 +116,10 @@ To prepare the dataset for our workshop, we need to apply a few more data filter
 peb.long %>% nrow
 
 peb.long = peb %>% 
-  subset(!duplicated(IDENTIFIER)) %>%
   gather(sample, expression, -ID_REF, -IDENTIFIER) %>%
   separate(sample, into=c("individual", "population"), sep='\\.') %>%
   subset(!grepl("Control", IDENTIFIER)) %>%
+  subset(!duplicated(paste(IDENTIFIER, individual))) %>%
   select(-ID_REF)
 
 peb.long %>% nrow
@@ -152,9 +154,7 @@ peb.means %>% print
 peb.long = peb.long %>% 
   group_by(individual) %>%
   mutate(
-    mean.expression=mean(expression)
-    ) %>%
-  mutate(
+    mean.expression=mean(expression),
     overexpressed = ifelse(expression > mean.expression, "overexpressed", "underexpressed")
   )
 
@@ -196,7 +196,7 @@ ggplot(peb.long, aes(x=overexpressed, y=expression)) +
 
 ```
 
-Let's create a nicer plot, in which we color by the population variable, also set limits for the Y axes, and use a whiter plot theme.
+Let's create a nicer plot, in which we color by the population variable, set limits for the Y axes, and use a whiter plot theme.
 
 ```{r}
 
@@ -213,10 +213,9 @@ Classifying cancer genes
 ------------------------
 
 
-Let's download a file containing the classification of genes into oncogenes and tumor suppressors:
+Remember that we also downloaded a file containing the classification of genes into oncogenes and tumor suppressors, from the NCG database:
 
 ```{r}
-#download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/cancer_genes.csv', dest='cancer_genes.csv')
 cancer = read.table("cancer_genes.csv", header=T)
 cancer %>% head
 
