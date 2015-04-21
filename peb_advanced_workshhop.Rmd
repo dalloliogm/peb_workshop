@@ -173,9 +173,9 @@ A ggplot2 plot is composed by a base ggplot() object, defining the dataset and t
 
 ```{r}
 
-ggplot(peb.long, aes(x=overexpressed, y=expression)) +
+ggplot(peb.long, aes(x=individual, y=expression)) +
   geom_point() + 
-  ggtitle("My first ggplot")
+  ggtitle("Expression by individual")
 
 ```
 
@@ -196,14 +196,22 @@ ggplot(peb.long, aes(x=overexpressed, y=expression)) +
 
 ```
 
-Let's create a nicer plot, in which we color by the population variable, set limits for the Y axes, and use a whiter plot theme.
+Let's create a nicer plot, in which we:
+
+    - sort the individuals by population (x=reorder..)
+    - color by the population variable   (color=population)
+    - set limits for the Y axis          (scale_y_continuous)
+    - set a nice name for X axis
+    - use a whiter plot theme.
 
 ```{r}
 
-ggplot(peb.long, aes(x=overexpressed, y=expression, color=population)) +
+ggplot(peb.long, aes(x=rearrange(individual, desc(population) y=expression, color=population)) +
   geom_boxplot() + 
   scale_y_continuous("Expression", limits=c(0, 1000)) + 
-  theme_bw()
+  scale_x_discrete('Individuals sorted by Population') +
+  theme_bw() +
+  ggtitle('Expression by individual')
 
 ```
 
@@ -246,18 +254,43 @@ peb.long = peb.long %>%
 ```
 
 
-advanced ggplot2
----------------------
+advanced ggplot2: facetting and saving to a file
+------------------------------------------------
 
 
 Now that we have more qualitative variables in peb.long, we can create more sophisticated plots. For example, an useful way to represent multi-dimensional data is facetting:
 
 ```{r}
 
-ggplot(peb.long, aes(x=overexpressed, y=expression, color=population)) +
-  facet_wrap(~dataset) +
-  geom_boxplot() +
+myplot = ggplot(peb.long, aes(x=rearrange(individual, desc(population) y=expression, color=population)) +
+  geom_boxplot() + 
   scale_y_continuous("Expression", limits=c(0, 1000)) + 
-  theme_bw()
+  scale_x_discrete('Individuals sorted by Population') +
+  theme_bw() +
+  ggtitle('Expression by individual')
+
+print(myplot + facet_wrap(~population))
+```
+
+If we want to save this plot to a file, we can do:
+
+```
+ggsave('expression_by_individual.pdf')
+```
+
+
+a Barchart plot
+---------------
+
+Let's see how many oncogenes/tumor suppressors are overexpressed in each population:
+
+```{r}
+peb.long %>% 
+    subset(dataset !='no-cancer') %>% 
+    ggplot(aes(x=dataset, fill=overexpressed)) + 
+        geom_bar(position='dodge') + 
+        facet_wrap(~population) +
+        theme_bw() +
+        ggtitle('Number of overexpressed/underexpressed genes by population')
 ```
 
