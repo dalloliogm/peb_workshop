@@ -1,21 +1,28 @@
 ---
 title: "PEB advanced R workshop"
-author: "GIovanni M DallOlio"
-date: "19/04/2015"
+author: "Giovanni M DallOlio"
+date: "28/04/2015"
 output: html_document
 ---
 
+PEB advanced R workshop
+---------------------------------
+
 Welcome to the PEB advanced R workshop! 
 
+We will take a "messy" gene expression table, and use the tidyr library to restructure it in a format that is better suited for data analysis. We will also group the data and calculate summaries using the dplyr library, and plot it using ggplot2.
 
+
+- http://dalloliogm.github.io/peb_workshop/
+- https://github.com/dalloliogm/peb_workshop
 
 Requirements
 -------------
 
 Let's install all the required packages:
 
-```{r}
-pkgs = c("tidyr", "dplyr", "ggplot2", "reshape2")
+```{r message=FALSE}
+pkgs = c("tidyr", "dplyr", "ggplot2")
 #for (pkg in pkgs) install.packages(pkg)
 for (pkg in pkgs) library(pkg, character.only=T)
 ```
@@ -24,10 +31,9 @@ The tidyr package requires at least R 3.1.2. If you can't install it, you can us
 
 We also need to download the following **data files**:
 
-```{r}
-#download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/peb_expression.csv', dest='peb_expression.csv')
-#download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/cancer_genes.csv', dest='cancer_genes.csv')
-
+```{r eval=FALSE}
+download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/peb_expression.csv', dest='peb_expression.csv')
+download.file('https://raw.githubusercontent.com/dalloliogm/peb_workshop/master/cancer_genes.csv', dest='cancer_genes.csv')
 ```
 
 
@@ -36,10 +42,10 @@ the peb_expression.csv file
 
 Let's read the peb_expression.csv file that we just downloaded, and have a look at its contents.
 
-```{r}
+```{r read}
 peb = read.table("peb_expression.csv", header=T, sep='\t')
 head(peb)
-summary(peb)
+str(peb)
 
 ```
 
@@ -55,7 +61,7 @@ This works similarly to the | in bash. We first write the name of the dataframe 
 
 For example, the following is equivalent to head(peb)
 
-```{r}
+```{r piping1}
 peb %>% head
 ```
 
@@ -64,55 +70,61 @@ peb %>% head
 Converting to a long format
 ------------------------------
 
-All the functions used in the rest of the workshop require the dataset to be in a long format. Let's convert it using the gather() function from tidyr:
+A dataset can be encoded in a "wide" format (more columns and less rows), or in a "long" format (minimum number of columns and more rows). While the wide format may be sometimes more readable for the human eye, the long format is better suited for data analysis. 
+
+Our peb data frame is in a "wide" format, as it contains one column for every individual. However, all the functions used in the rest of the workshop require the dataset to be in a long format. Let's convert it using the gather() function from tidyr:
 
 
-```{r}
-peb.long = gather(peb, sample, expression, -ID_REF, -IDENTIFIER)
+```{r gather1}
+peb.long = gather(peb, sample, expression, -c(ID_REF, IDENTIFIER))
 head(peb.long)
 ```
 
 Explanation:
 
-- sample is the name of the new column containing the key variables
-- expression is the new column containing the values variable
-- we use the - operator to define which columns must not be converted to the long format
+- *sample* is the name of the new column containing the key variables
+- *expression* is the new column containing the values variable
+- we use the *-* operator to define which columns must **not** be converted to the long format
 
-Note how the new format has only four columns.
+
+Note how the new format has only four columns. Many recent R libraries are designed for datasets in the long format. A common beginner mistake is to apply these libraries to datasets in the wide format, while instead you should re-format your dataset first. 
 
 If you couldn't install the tidyr package, you can achieve the same format using the *melt* function from reshape2
 
-```{r}
+```{r eval=FALSE}
+install.packages("reshape2")
+library("reshape2")
 peb.long = melt(peb, id.vars=c("ID_REF", "IDENTIFIER"), variable.name="sample")
 names(peb.long)[4] = "expression"
 head(peb.long, 3)
 ```
 
 
-
 Tidying-up the peb.long dataframe
 ---------------------------------------------
 
-In a properly structured table each variable must contain only one type of information. If we look at our peb.long dataframe, the sample column contains both the individual ID and its population. Let's split this column into two using *separate* from tidyr:
+In a properly structured table each variable must contain only one type of information. If we look at our peb.long dataframe, the sample column contains both the individual ID and its population. Let's split this column into two, using *separate* from tidyr:
 
 
-```{r}
+```{r gather2}
 peb.long.tmp = gather(peb, sample, expression, -ID_REF, -IDENTIFIER)
 peb.long     = separate(peb.long.tmp, sample, into=c("individual", "population"), sep='\\.')
+head(peb.long)
 ```
 
 The above code can be simplified using the %>% operator:
-```{r}
+```{r gather2.dplyr}
 peb.long = peb %>% 
   gather(sample, expression, -ID_REF, -IDENTIFIER) %>%
   separate(sample, into=c("individual", "population"), sep='\\.')
+
 ```
 
 
 To prepare the dataset for our workshop, we need to apply a few more data filtering steps, like removing all the "Control" rows, eliminating all the duplicated genes (keeping only one probe per gene), and dropping the ID_REF column. 
 
 
-```{r}
+```{r tidy.all}
 peb.long %>% nrow
 
 peb.long = peb %>% 
@@ -136,7 +148,7 @@ Apart from the %>% operator, the dplyr library introduces three useful functions
 
 - *summarise* is used to calculate summaries of a grouped dataset - for example we can use it to calculate the mean and standard deviation of the expression for every population:
 
-```{r}
+```{r grouping1}
 peb.means = peb.long %>% 
   group_by(population) %>%
   summarise(
@@ -150,7 +162,7 @@ peb.means %>% print
 - *mutate* is used to add columns to a data frame. For example we can use it to check if a given gene is over or under expressed in an individual, compared to the other genes:
 
 
-```{r}
+```{r mutate1}
 peb.long = peb.long %>% 
   group_by(individual) %>%
   mutate(
@@ -296,7 +308,7 @@ Now that we have more qualitative variables in peb.long, we can create more soph
 
 ```{r fig.width=10, fig.height=6}
 
-myplot = ggplot(peb.long, aes(x=rearrange(individual, desc(population)), y=expression, color=population)) +
+myplot = ggplot(peb.long, aes(x=reorder(individual, desc(population)), y=expression, color=population)) +
   geom_boxplot() + 
   scale_y_continuous("Expression", limits=c(0, 1000)) + 
   scale_x_discrete('Individuals sorted by Population') +
@@ -304,7 +316,7 @@ myplot = ggplot(peb.long, aes(x=rearrange(individual, desc(population)), y=expre
   theme(axis.text.x=element_text(angle = -90, hjust = 0)) +
   ggtitle('Expression by individual')
 
-print(myplot + facet_wrap(~population))
+print(myplot + facet_wrap(~population, scales="free"))
 ```
 
 If we want to save this plot to a file, we can do:
