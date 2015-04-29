@@ -71,7 +71,7 @@ img {
 <div id="peb-advanced-r-workshop" class="section level2">
 <h2>PEB advanced R workshop</h2>
 <p>Welcome to the PEB advanced R workshop!</p>
-<p>We will take a “messy” gene expression table, and use the tidyr library to restructure it in a format that is better suited for data analysis. We will also group the data and calculate summaries using the dplyr library, and plot it using ggplot2.</p>
+<p>We will take a “messy” gene expression table, and use the tidyr library to restructure it in a format that is better suited for data analysis. We will also group the data and calculate summaries using the dplyr library, and finally plot it using ggplot2.</p>
 <ul>
 <li><a href="http://dalloliogm.github.io/peb_workshop/">http://dalloliogm.github.io/peb_workshop/</a></li>
 <li><a href="https://github.com/dalloliogm/peb_workshop">https://github.com/dalloliogm/peb_workshop</a></li>
@@ -147,7 +147,7 @@ head(peb)</code></pre>
 <div id="a-piping-system-for-r" class="section level2">
 <h2>A piping system for R</h2>
 <p>The dplyr package introduced a piping system for R, using the %&gt;% symbol.</p>
-<p>This works similarly to the | in bash. We first write the name of the dataframe to use, then all the operation that must be executed on it.</p>
+<p>This works similarly to the piping system in bash, but using the %&gt;% symbol instead of the pipe |. We first write the name of the dataframe to use, then all the operation that must be executed on it.</p>
 <p>For example, the following is equivalent to head(peb)</p>
 <pre class="r"><code>peb %&gt;% head</code></pre>
 <pre><code>##        ID_REF IDENTIFIER GSM11815.YRI GSM11832.YRI GSM12069.YRI
@@ -178,11 +178,12 @@ head(peb)</code></pre>
 ## 4      18550.7      23496.5      21315.4      28631.4
 ## 5      15799.8      16685.8      18817.3      17421.1
 ## 6       7949.2       9486.5       7494.5       7252.1</code></pre>
+<p>We can concantenate any number of operations on the same dataset, just as we would do in bash. We will play with this piping system in a few minutes.</p>
 </div>
 <div id="converting-to-a-long-format" class="section level2">
 <h2>Converting to a long format</h2>
-<p>A dataset can be encoded in a “wide” format (more columns and less rows), or in a “long” format (minimum number of columns and more rows). While the wide format may be sometimes more readable for the human eye, the long format is better suited for data analysis.</p>
-<p>Our peb data frame is in a “wide” format, as it contains one column for every individual. However, all the functions used in the rest of the workshop require the dataset to be in a long format. Let’s convert it using the gather() function from tidyr:</p>
+<p>A dataset can be encoded in a “wide” format (more columns and less rows), or in a “long” format (minimum number of columns and more rows). While the wide format can be more readable for the human eye, the long format is better suited for data analysis.</p>
+<p>Our peb data frame is in a “wide” format, as it contains many columns, one for every individual. However, all the functions used in the rest of the workshop require the dataset to be in a long format. Let’s convert it using the gather() function from tidyr:</p>
 <pre class="r"><code>peb.long = gather(peb, sample, expression, -c(ID_REF, IDENTIFIER))
 head(peb.long)</code></pre>
 <pre><code>##        ID_REF IDENTIFIER       sample expression
@@ -194,11 +195,12 @@ head(peb.long)</code></pre>
 ## 6   200005_at      EIF3D GSM11815.YRI     8824.5</code></pre>
 <p>Explanation:</p>
 <ul>
-<li>sample is the name of the new column containing the key variables</li>
-<li>expression is the new column containing the values variable</li>
-<li>we use the - operator to define which columns must <strong>not</strong> be converted to the long format</li>
+<li><em>sample</em> is the name of the new column containing the key variables</li>
+<li><em>expression</em> is the new column containing the values variable</li>
+<li>we use the <em>-</em> operator to define which columns must <strong>not</strong> be converted to the long format</li>
 </ul>
-<p>Note how the new format has only four columns. Many recent R libraries are designed for datasets in the long format. A common beginner mistake is to apply these libraries to datasets in the wide format, while instead you should re-format your dataset first.</p>
+<p>Note how the new format encodes exactly the same data as before, but has only four columns.</p>
+<p>Nowadays many recent R libraries and functions are designed for datasets in the long format. A common beginner mistake is trying to apply these functions to datasets in the wide format, while the trick is to restructure the data first. If you learn how to reorganize your dataset into a long format, then you can solve most data analysis problems in R using always the same approach.</p>
 <p>If you couldn’t install the tidyr package, you can achieve the same format using the <em>melt</em> function from reshape2</p>
 <pre class="r"><code>install.packages(&quot;reshape2&quot;)
 library(&quot;reshape2&quot;)
@@ -257,12 +259,13 @@ peb.means %&gt;% print</code></pre>
 ## 2        EUR 742.9541 2818.128
 ## 3        YRI 744.1489 2856.510</code></pre>
 <ul>
-<li><em>mutate</em> is used to add columns to a data frame. For example we can use it to check if a given gene is over or under expressed in an individual, compared to the other genes:</li>
+<li><em>mutate</em> is used to add columns to a data frame, or to modify existing columns. For example we can use it to annotate whether each gene is over or under expressed, compared to the expression of other genes in the same individual:</li>
 </ul>
 <pre class="r"><code>peb.long = peb.long %&gt;% 
   group_by(individual) %&gt;%
   mutate(
-    mean.expression=mean(expression),
+    mean.expression=mean(expression) ) %&gt;%
+  mutate(
     overexpressed = ifelse(expression &gt; mean.expression, &quot;overexpressed&quot;, &quot;underexpressed&quot;)
   )
 
