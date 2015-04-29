@@ -10,7 +10,7 @@ PEB advanced R workshop
 
 Welcome to the PEB advanced R workshop! 
 
-We will take a "messy" gene expression table, and use the tidyr library to restructure it in a format that is better suited for data analysis. We will also group the data and calculate summaries using the dplyr library, and plot it using ggplot2.
+We will take a "messy" gene expression table, and use the tidyr library to restructure it in a format that is better suited for data analysis. We will also group the data and calculate summaries using the dplyr library, and finally plot it using ggplot2.
 
 
 - http://dalloliogm.github.io/peb_workshop/
@@ -57,7 +57,7 @@ A piping system for R
 
 The dplyr package introduced a piping system for R, using the %>% symbol.
 
-This works similarly to the | in bash. We first write the name of the dataframe to use, then all the operation that must be executed on it.
+This works similarly to the piping system in bash, but using the %>% symbol instead of the pipe |. We first write the name of the dataframe to use, then all the operation that must be executed on it.
 
 For example, the following is equivalent to head(peb)
 
@@ -65,14 +65,14 @@ For example, the following is equivalent to head(peb)
 peb %>% head
 ```
 
-
+We can concantenate any number of operations on the same dataset, just as we would do in bash. We will play with this piping system in a few minutes.
 
 Converting to a long format
 ------------------------------
 
-A dataset can be encoded in a "wide" format (more columns and less rows), or in a "long" format (minimum number of columns and more rows). While the wide format may be sometimes more readable for the human eye, the long format is better suited for data analysis. 
+A dataset can be encoded in a "wide" format (more columns and less rows), or in a "long" format (minimum number of columns and more rows). While the wide format can be more readable for the human eye, the long format is better suited for data analysis. 
 
-Our peb data frame is in a "wide" format, as it contains one column for every individual. However, all the functions used in the rest of the workshop require the dataset to be in a long format. Let's convert it using the gather() function from tidyr:
+Our peb data frame is in a "wide" format, as it contains many columns, one for every individual. However, all the functions used in the rest of the workshop require the dataset to be in a long format. Let's convert it using the gather() function from tidyr:
 
 
 ```{r gather1}
@@ -86,8 +86,9 @@ Explanation:
 - *expression* is the new column containing the values variable
 - we use the *-* operator to define which columns must **not** be converted to the long format
 
+Note how the new format encodes exactly the same data as before, but has only four columns. 
 
-Note how the new format has only four columns. Many recent R libraries are designed for datasets in the long format. A common beginner mistake is to apply these libraries to datasets in the wide format, while instead you should re-format your dataset first. 
+Nowadays many recent R libraries and functions are designed for datasets in the long format. A common beginner mistake is trying to apply these functions to datasets in the wide format, while the trick is to restructure the data first. If you learn how to reorganize your dataset into a long format, then you can solve most data analysis problems in R using always the same approach. 
 
 If you couldn't install the tidyr package, you can achieve the same format using the *melt* function from reshape2
 
@@ -159,14 +160,15 @@ peb.means %>% print
 
 ```
 
-- *mutate* is used to add columns to a data frame. For example we can use it to check if a given gene is over or under expressed in an individual, compared to the other genes:
+- *mutate* is used to add columns to a data frame, or to modify existing columns. For example we can use it to annotate whether each gene is over or under expressed, compared to the expression of other genes in the same individual:
 
 
 ```{r mutate1}
 peb.long = peb.long %>% 
   group_by(individual) %>%
   mutate(
-    mean.expression=mean(expression),
+    mean.expression=mean(expression) ) %>%
+  mutate(
     overexpressed = ifelse(expression > mean.expression, "overexpressed", "underexpressed")
   )
 
